@@ -4,7 +4,7 @@
 from collections import namedtuple
 from operator import attrgetter
 
-Item = namedtuple("Item", ['index', 'value', 'weight'])
+Item = namedtuple("Item", ['index', 'value', 'weight', 'density'])
 
 def solve_it(input_data):
     # Modify this code to run your optimization algorithm
@@ -21,13 +21,20 @@ def solve_it(input_data):
     for i in range(1, item_count+1):
         line = lines[i]
         parts = line.split()
-        items.append(Item(i-1, int(parts[0]), int(parts[1])))
+        v, w = int(parts[0]), int(parts[1])
+        items.append(Item(i-1, v, w, float(v / w)))
 
     # # 1) calling trivial solution
     # value, opt_flag, taken = trivial(capacity, items)
 
-    # 2) calling quantity-greedy algorithm
-    value, opt_flag, taken = greedy_quantity(capacity, items)
+    # # 2) calling quantity greedy algorithm
+    # value, opt_flag, taken = greedy_quantity(capacity, items)
+
+    # # 3) calling value greedy algorithm
+    # value, opt_flag, taken = greedy_value(capacity, items)
+
+    # 4) calling value-density greedy algorithm
+    value, opt_flag, taken = greedy_value_density(capacity, items)
     
     # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(opt_flag) + '\n'
@@ -59,6 +66,40 @@ def greedy_quantity(capacity, items):
     taken = [0]*len(items)
 
     for item in sorted(items, key=attrgetter('weight')):
+        if weight + item.weight <= capacity:
+            taken[item.index] = 1
+            value += item.value
+            weight += item.weight
+
+    opt_flag = 0
+
+    return value, opt_flag, taken
+
+def greedy_value(capacity, items):
+    # idea: valuable items are best, start with
+    # the most valuable items
+    value = 0
+    weight = 0
+    taken = [0]*len(items)
+
+    for item in sorted(items, key=attrgetter('value'), reverse=True):
+        if weight + item.weight <= capacity:
+            taken[item.index] = 1
+            value += item.value
+            weight += item.weight
+
+    opt_flag = 0
+
+    return value, opt_flag, taken
+
+def greedy_value_density(capacity, items):
+    # idea: valuable items are best, start with
+    # the most valuable items
+    value = 0
+    weight = 0
+    taken = [0]*len(items)
+
+    for item in sorted(items, key=attrgetter('density'), reverse=True):
         if weight + item.weight <= capacity:
             taken[item.index] = 1
             value += item.value
