@@ -33,8 +33,11 @@ def solve_it(input_data):
     # # 3) calling value greedy algorithm
     # value, opt_flag, taken = greedy_value(capacity, items)
 
-    # 4) calling value-density greedy algorithm
-    value, opt_flag, taken = greedy_value_density(capacity, items)
+    # # 4) calling value-density greedy algorithm
+    # value, opt_flag, taken = greedy_value_density(capacity, items)
+
+    # 5) calling bottom-up dynamic programming solution
+    value, opt_flag, taken = dynamic_programming(capacity, items)
     
     # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(opt_flag) + '\n'
@@ -94,7 +97,7 @@ def greedy_value(capacity, items):
 
 def greedy_value_density(capacity, items):
     # idea: valuable items are best, start with
-    # the most valuable items
+    # the most valuable items per unit mass
     value = 0
     weight = 0
     taken = [0]*len(items)
@@ -106,6 +109,42 @@ def greedy_value_density(capacity, items):
             weight += item.weight
 
     opt_flag = 0
+
+    return value, opt_flag, taken
+
+def dynamic_programming(capacity, items):
+    n = len(items)
+    taken = [0] * n
+    sol_table = [[0 for j in range(n+1)] for i in range(capacity+1)]
+    # i indexing weight/capacities (rows)
+    # j indexing items (columns)
+    for j in range(n+1):
+        if j > 0:
+            item_val = items[j-1].value
+            item_weight = items[j-1].weight
+        for i in range(capacity+1):
+            if i == 0 or j == 0:
+                continue
+            # as we go down the col, if the weight of the item is greater than capacity,
+            # the solution table takes the value 'to the left'
+            elif item_weight > i:
+                sol_table[i][j] = sol_table[i][j-1]
+            else:
+                val_take_current = item_val + sol_table[i-item_weight][j-1]
+                val_keep_last    = sol_table[i][j-1]
+                sol_table[i][j] = max(val_take_current, val_keep_last)
+
+    # trace back
+    value = sol_table[capacity][n]
+    cap = capacity
+    for k in reversed(range(0,n)):
+        if sol_table[cap][k+1] == sol_table[cap][k]:
+            taken[k] = 0
+        else:
+            taken[k] = 1
+            cap -= items[k].weight
+
+    opt_flag = 1
 
     return value, opt_flag, taken
 
