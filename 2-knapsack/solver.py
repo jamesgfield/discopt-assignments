@@ -3,6 +3,8 @@
 
 from collections import namedtuple
 from operator import attrgetter
+import gurobipy as gp
+from gurobipy import GRB
 
 Item = namedtuple("Item", ['index', 'value', 'weight', 'density'])
 
@@ -36,8 +38,25 @@ def solve_it(input_data):
     # # 4) calling value-density greedy algorithm
     # value, opt_flag, taken = greedy_value_density(capacity, items)
 
-    # 5) calling bottom-up dynamic programming solution
-    value, opt_flag, taken = dynamic_programming(capacity, items)
+    # # 5) calling bottom-up dynamic programming solution
+    # value, opt_flag, taken = dynamic_programming(capacity, items)
+
+    # # 6) combination approach: if capacity <100000, use dp, else v-d greedy:
+    # # doing this for the pass mark, will come back later to implement mip program.
+    # if capacity < 200001 and item_count < 2000:
+    #     value, opt_flag, taken = dynamic_programming(capacity, items)
+    # else:
+    #     value, opt_flag, taken = greedy_value_density(capacity, items)
+
+    # # 7) integer program using gurobipy ("Model too large for size-limited license")
+    # value, opt_flag, taken = integer_programming(capacity, items)
+
+    # 8) combination approach 2: if len(items) < 2000, use gurobi, else v-d greedy
+    if len(items) < 2000:
+        value, opt_flag, taken = integer_programming(capacity, items)
+    else:
+        value, opt_flag, taken = greedy_value_density(capacity, items)
+
     
     # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(opt_flag) + '\n'
@@ -147,6 +166,38 @@ def dynamic_programming(capacity, items):
     opt_flag = 1
 
     return value, opt_flag, taken
+
+def integer_programming(capacity, items):
+    n = len(items)
+    values = [item.value for item in items]
+    weights = [item.weight for item in items]
+
+    # Create model
+    m = gp.Model("knapsack")
+
+    # Variables
+    x = m.addVars(n, vtype=GRB.BINARY, name="items")
+
+    # Constraints
+    m.addLConstr(gp.LinExpr(weights, [x[i] for i in range(n)]), GRB.LESS_EQUAL, capacity, name="Capacity Constraint")
+
+    # Objective
+    m.setObjective(gp.LinExpr(values, [x[i] for i in range(n)]), GRB.MAXIMIZE)
+
+    m.update()
+    m.optimize()
+
+    # prepare results
+    value = int(m.ObjVal)
+    if m.status == 2:
+        opt_flag = 1
+    else:
+        opt_flag = 0
+    taken = [int(var.x) for var in m.getVars()]
+
+    return value, opt_flag, taken
+
+
 
 if __name__ == '__main__':
     import sys
